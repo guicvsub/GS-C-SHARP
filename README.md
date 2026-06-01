@@ -1,4 +1,15 @@
+
 # AgroShield.AlertEngine.Api
+
+## Integrantes
+
+| Nome | RM |
+| --- | --- |
+| Guilherne Santiago da Silva | RM552321 |
+| Gabriel Souza Fiore | RM553710 |
+| Gustavo Govea Soares | RM553842 |
+| Pedro Henrique Mello Silva Alves | RM554223 |
+| Gabriel Borba | RM553187 |
 
 Servico **backend** em C# (.NET 8) para composicao de alertas agricolas e gerenciamento de terrenos (RF-IA parcial, US-04).
 
