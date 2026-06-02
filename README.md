@@ -1,45 +1,82 @@
-
-# AgroShield.AlertEngine.Api
+# AgroShield - AlertEngine Api
 
 ## Integrantes
 
-| Nome | RM |
-| --- | --- |
-| Guilherne Santiago da Silva | RM552321 |
-| Gabriel Souza Fiore | RM553710 |
-| Gustavo Govea Soares | RM553842 |
+| Nome                             | RM       |
+| -------------------------------- | -------- |
+| Guilherme Santiago da Silva      | RM552321 |
+| Gabriel Souza Fiore              | RM553710 |
+| Gustavo Gouvea Soares            | RM553842 |
 | Pedro Henrique Mello Silva Alves | RM554223 |
-| Gabriel Borba | RM553187 |
+| Gabriel Borba                    | RM553187 |
 
-Servico **backend** em C# (.NET 8) para composicao de alertas agricolas e gerenciamento de terrenos (RF-IA parcial, US-04).
+---
+
+## Resumo da Solução
+
+Servico **backend** em C# (.NET 8) para composicao de alertas agricolas e gerenciamento de terrenos.
 
 - **Entrada:** dados do terreno + metricas geo (NDVI, umidade, etc.)
 - **Saida:** JSON com `mensagemParaFala` para o servico **Python TTS**
 - **Consumidor:** API Spring Boot (Java) — orquestrador
 - **Banco de dados:** MySQL com Entity Framework Core
 
+## Relacao com o Tema — Industria Espacial
+
+O modulo processa metricas extraidas de imagens de satelite (NDVI, umidade). Essas metricas vem de satelites de observacao da Terra como Sentinel-2 e Landsat, que identificam a saude da vegetacao via espectro multiespectral. Sem esses dados orbitais, nao seria possivel detectar estresse hidrico.
+
+O C# atua como motor de classificacao: recebe os dados brutos do satelite (via Java), aplica regras agronomicas e devolve um alerta priorizado com a mensagem para o TTS Python falar ao agricultor.
+
+## ODS Relacionado
+
+**ODS 2 — Fome Zero e Agricultura Sustentavel**
+Alertas baseados em satelite ajudam a evitar perda de safra e otimizam o uso de agua na irrigacao.
+
+**ODS 13 — Acao Contra a Mudanca Global do Clima**
+Monitoramento continuo por satelite permite adaptar cultivos a eventos climaticos extremos com antecedencia.
+
 ## Funcionalidades
 
 ### 1. Composicao de Alertas Agricolas
+
 - Endpoint: `POST /api/v1/alertas/compor`
 - Avalia metricas NDVI, umidade, irrigacao e dias sem imagem satelite
-- Retorna alerta priorizado com mensagem para TTS
+- Classifica o risco em 4 niveis: BAIXA, MEDIA, ALTA, CRITICO
+- Salva o alerta no historico do terreno automaticamente
 
 ### 2. CRUD de Terrenos
-- Endpoint: `GET /api/v1/terrenos` - Listar todos
-- Endpoint: `GET /api/v1/terrenos/{id}` - Buscar por ID
-- Endpoint: `POST /api/v1/terrenos` - Criar novo
-- Endpoint: `PUT /api/v1/terrenos/{id}` - Atualizar
-- Endpoint: `DELETE /api/v1/terrenos/{id}` - Deletar
+
+- `GET /api/v1/terrenos` — listar todos
+- `GET /api/v1/terrenos/{id}` — buscar por ID
+- `POST /api/v1/terrenos` — criar
+- `PUT /api/v1/terrenos/{id}` — atualizar
+- `DELETE /api/v1/terrenos/{id}` — deletar
 
 ### 3. Exportacao de Historico de Alertas
-- Endpoint: `GET /api/v1/terrenos/{id}/alertas/exportar`
-- Exporta historico de alertas de um terreno em formato JSON
 
-## Rodar
+- `GET /api/v1/terrenos/{id}/alertas/exportar`
+- Retorna historico completo em JSON
+
+### Funcionalidade Avançada (Bônus)
+
+Classificação automática de risco agrícola baseada em métricas
+oriundas de monitoramento por satélite.
+
+Níveis:
+
+- BAIXA
+- MEDIA
+- ALTA
+- CRITICO
+
+A classificação é realizada pelo endpoint:
+
+POST /api/v1/alertas/compor
+
+## Como Rodar
 
 ```powershell
-cd services/AgroShield.AlertEngine.Api
+cd AgroShield.AlertEngine.Api
 dotnet restore
 dotnet run
 ```
@@ -47,131 +84,65 @@ dotnet run
 - API: `http://localhost:5050`
 - Swagger: `http://localhost:5050/swagger`
 
-## Configuracao do Banco de Dados
+## Configuracao do Banco MySQL
 
-O projeto utiliza MySQL com Entity Framework Core. Configure a connection string em `appsettings.json`:
+Edite a connection string em `appsettings.json`:
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=agrosat_csharp;User=root;Password=0000;SslMode=None;AllowPublicKeyRetrieval=True"
+    "DefaultConnection": "Server=localhost;Database=agroshield_csharp;User=root;Password=0000;SslMode=None;AllowPublicKeyRetrieval=True"
   }
 }
 ```
 
-### Criar e Aplicar Migration
+
+## Pacotes NuGet
+
+| Pacote                                 | Versao |
+| -------------------------------------- | ------ |
+| `Pomelo.EntityFrameworkCore.MySql`     | 8.0.2  |
+| `Microsoft.EntityFrameworkCore`        | 8.0.10 |
+| `Microsoft.EntityFrameworkCore.Design` | 8.0.10 |
+| `Microsoft.EntityFrameworkCore.Tools`  | 8.0.10 |
+| `Swashbuckle.AspNetCore`               | 6.6.2  | 
+
 
 ```powershell
-# Criar migration inicial
-dotnet ef migrations add InitialCreate
+dotnet add package nome_do_pacote
+``` 
 
-# Aplicar migration
+## Comandos de Migration
+
+```powershell
+dotnet ef migrations add InitialCreate
 dotnet ef database update
 ```
 
-## Endpoint principal: Composicao de Alertas
-
-`POST /api/v1/alertas/compor`
-
-### Exemplo — Risco de fungo (TC alinhado ao PDF)
-
-```json
-{
-  "terrenoId": 5,
-  "nome": "Lavoura Norte",
-  "culturaAtual": "Soja",
-  "areaTotalHectares": 50,
-  "areaCultivoHectares": 35,
-  "emCultivo": true,
-  "irrigacaoAtiva": true,
-  "geo": {
-    "ndviMedio": 0.42,
-    "ndviZonaNorte": 0.25,
-    "ndviZonaSul": 0.65,
-    "umidadeRelativa": 0.85,
-    "diasSemImagemSatelite": 2
-  }
-}
-```
-
-### Resposta
-
-```json
-{
-  "terrenoId": 5,
-  "severidade": "ALTA",
-  "codigo": "RISCO_FUNGO",
-  "mensagemParaFala": "Atencao! Risco de fungo na area norte. Evite irrigar nos proximos tres dias.",
-  "mensagemTecnica": "NDVI norte=0.25; umidade=0.85; irrigacao ativa",
-  "acaoRecomendada": "SUSPENDER_IRRIGACAO_72H"
-}
-```
+A migration `InitialCreate` ja esta na pasta `Migrations/`, so rodar o `database update`.
 
 ## Regras implementadas
 
-| Codigo | Severidade | Condicao resumida |
-|--------|------------|-------------------|
-| `RISCO_FUNGO` | ALTA | NDVI norte baixo + umidade alta + irrigacao ativa |
-| `NDVI_CRITICO` | ALTA | NDVI medio &lt; 0,3 |
-| `ESTRESSE_HIDRICO` | MEDIA | NDVI norte baixo, sul ok |
-| `DADOS_SATELITE_DESATUALIZADOS` | MEDIA | Sem imagem &gt; 10 dias |
-| `IRRIGACAO_OPCIONAL` | BAIXA | Zona sul com NDVI alto |
-| `AREA_CULTIVO_INATIVA` | BAIXA | emCultivo false com area &gt; 0 |
-| `SAUDAVEL` | BAIXA | Nenhuma regra critica disparada |
+| Codigo                          | Severidade | Condicao                                          |
+| ------------------------------- | ---------- | ------------------------------------------------- |
+| `COLAPSO_PRODUTIVO`             | CRITICO    | NDVI < 0,15 + umidade >= 0,90 + irrigacao ativa   |
+| `SEM_COBERTURA_SATELITE`        | CRITICO    | Sem imagem > 20 dias                              |
+| `RISCO_FUNGO`                   | ALTA       | NDVI norte baixo + umidade alta + irrigacao ativa |
+| `NDVI_CRITICO`                  | ALTA       | NDVI medio < 0,3                                  |
+| `ESTRESSE_HIDRICO`              | MEDIA      | NDVI norte baixo, sul ok                          |
+| `DADOS_SATELITE_DESATUALIZADOS` | MEDIA      | Sem imagem > 10 dias                              |
+| `IRRIGACAO_OPCIONAL`            | BAIXA      | Zona sul com NDVI alto                            |
+| `AREA_CULTIVO_INATIVA`          | BAIXA      | emCultivo false com area > 0                      |
+| `SAUDAVEL`                      | BAIXA      | Nenhuma regra disparada                           |
 
 ## Fluxo com Java e Python
 
-```text
-Java (Spring)  --POST /compor-->  C# AlertEngine
-Java           --POST /speak-->   Python TTS  (mensagemParaFala -> MP3)
-Java           --salva-->         MySQL (alerta + urlAudio)
 ```
-
-## Decisoes Tecnicas
-
-### Tecnologia
-- **Framework:** .NET 8 Web API
-- **ORM:** Entity Framework Core 8.0.10
-- **Provider MySQL:** Pomelo.EntityFrameworkCore.MySql 8.0.2
-- **Documentacao:** Swashbuckle.AspNetCore 6.6.2
-
-### Arquitetura
-- **Padrao:** Controller-Service-Repository (simplificado)
-- **Injecao de Dependencia:** DI nativa do .NET
-- **Validacao:** Data Annotations em DTOs
-- **Tratamento de Erros:** try-catch com logging estruturado
-
-### Entidades de Dominio
-
-#### Terreno
-- Representa uma propriedade rural ou talhao
-- Campos: nome, descricao, coordenadas, areas, cultura, tipo de solo, irrigacao
-- Relacionamento: 1:N com HistoricoAlerta
-
-#### HistoricoAlerta
-- Registra todos os alertas gerados para um terreno
-- Campos: codigo, severidade, mensagens, metricas no momento do alerta
-- Relacionamento: N:1 com Terreno
-
-### Design de API
-- **RESTful:** Verbos HTTP adequados (GET, POST, PUT, DELETE)
-- **Status Codes:** 200, 201, 204, 400, 404, 500
-- **Content-Type:** application/json
-- **Versionamento:** /api/v1/
-
-### Segurança
-- **Nota:** Este servico e interno e deve ser protegido por firewall ou rede privada
-- **Futuro:** Adicionar autenticacao JWT se necessario para acesso externo
-
-### Performance
-- **Indices:** Configurados em campos frequentemente consultados (nome, terrenoId, codigo, criadoEm)
-- **Lazy Loading:** Nao utilizado (eager loading para simplicidade)
-- **Connection Pooling:** Gerenciado automaticamente pelo EF Core
-
-### Testes
-- **Unitarios:** AlertCompositionServiceTests.cs (7 testes)
-- **Cobertura:** 100% dos cenarios de alerta
-- **Execucao:** `dotnet test`
+Java (Spring)  --POST /compor-->  C# AlertEngine  --> MySQL (salva historico)
+                                       |
+                                       --> retorna { mensagemParaFala, severidade, ... }
+Java           --POST /speak-->   Python TTS  (mensagemParaFala -> MP3)
+```
 
 ## Testes
 
@@ -179,28 +150,51 @@ Java           --salva-->         MySQL (alerta + urlAudio)
 dotnet test
 ```
 
+7 testes unitarios cobrindo todos os cenarios de alerta.
+
 ## Estrutura do Projeto
 
 ```
 AgroShield.AlertEngine.Api/
 ├── Controllers/
-│   ├── AlertasController.cs       # Composicao de alertas
-│   └── TerrenosController.cs      # CRUD de terrenos
+│   ├── AlertasController.cs
+│   └── TerrenosController.cs
 ├── Data/
-│   └── AgroShieldDbContext.cs        # DbContext EF Core
+│   └── AgroShieldDbContext.cs
 ├── Entities/
-│   ├── Terreno.cs                 # Entidade Terreno
-│   └── HistoricoAlerta.cs         # Entidade HistoricoAlerta
+│   ├── Terreno.cs
+│   └── HistoricoAlerta.cs
+├── Migrations/
+│   ├── 20260601000000_InitialCreate.cs
+│   └── AgroShieldDbContextModelSnapshot.cs
 ├── Models/
-│   ├── ComporAlertaRequest.cs     # DTO para composicao
-│   ├── AlertaComposicaoResponse.cs # DTO de resposta
-│   ├── GeoMetricasInput.cs        # DTO de metricas
-│   ├── TerrenoRequest.cs          # DTO para CRUD
-│   └── TerrenoResponse.cs         # DTO de resposta CRUD
+│   ├── AlertaAvaliado.cs
+│   ├── AlertaComposicaoResponse.cs
+│   ├── ComporAlertaRequest.cs
+│   ├── GeoMetricasInput.cs
+│   ├── TerrenoRequest.cs
+│   └── TerrenoResponse.cs
 ├── Services/
 │   ├── IAlertCompositionService.cs
-│   └── AlertCompositionService.cs # Logica de composicao
-├── Program.cs                      # Configuracao da aplicacao
-├── appsettings.json               # Configuracoes
-└── AgroShield.AlertEngine.Api.csproj # Dependencias
+│   └── AlertCompositionService.cs
+├── Program.cs
+├── appsettings.json
+└── AGROSHIELD_CSHARP.postman_collection.json
+
+AgroShield.AlertEngine.Api.Tests/
+└── AlertCompositionServiceTests.cs
 ```
+
+## Decisoes Tecnicas
+
+Optamos por **Controller → Service → DbContext** direto, sem camada de Repository, porque o escopo da GS nao justifica a complexidade extra. O `AlertCompositionService` acumula candidatos em lista e escolhe o de maior prioridade — isso resolve o caso de multiplas regras verdadeiras ao mesmo tempo sem precisar de if/else aninhado.
+
+Os niveis CRITICO (`COLAPSO_PRODUTIVO` e `SEM_COBERTURA_SATELITE`) foram adicionados porque o PDF da GS pede classificacao em 4 niveis como bonus. Os limiares foram baseados em referencias agronomicas para culturas de soja e milho no cerrado brasileiro.
+
+Escolhemos `Pomelo.EntityFrameworkCore.MySql` por ser o provider MySQL mais ativo para .NET 8. Os indices foram colocados em `Nome`, `TerrenoId`, `Codigo` e `CriadoEm` que sao os campos mais consultados nas queries de filtro e relatorio.
+
+O `AlertasController` valida se o terreno existe antes de gerar o alerta — isso evita historico orfao caso o Java mande um `terrenoId` invalido. O alerta e salvo no banco logo apos a composicao, na mesma requisicao.
+
+---
+
+- limite de caracteres em campos de texto
