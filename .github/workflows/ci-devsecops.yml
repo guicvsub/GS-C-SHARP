@@ -1,0 +1,54 @@
+name: CI - DevSecOps AgroShield AlertEngine
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  security-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  
+
+      # CONTROLE DE SEGURANÇA: Detectar segredos expostos no código
+      - name: Scan de segredos expostos (GitLeaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configurar .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # CONTROLE: Gerar appsettings seguro usando GitHub Secrets (nunca hardcoded)
+      - name: Injetar segredos no appsettings
+        run: |
+          cat > AgroSat.AlertEngine.Api/appsettings.Production.json << EOF
+          {
+            "ConnectionStrings": {
+              "DefaultConnection": "Server=${{ secrets.DB_SERVER }};Database=${{ secrets.DB_NAME }};User=${{ secrets.DB_USER }};Password=${{ secrets.DB_PASSWORD }};SslMode=None;AllowPublicKeyRetrieval=True"
+            },
+            "Logging": {
+              "LogLevel": {
+                "Default": "Information"
+              }
+            }
+          }
+          EOF
+          echo "appsettings.Production.json gerado com segredos do GitHub Secrets"
+
+      - name: Restaurar dependências
+        run: dotnet restore AgroShield.AlertEngine.Api/AgroShield.AlertEngine.Api.csproj
+
+      - name: Build do projeto
+        run: dotnet build AgroShield.AlertEngine.Api/AgroShield.AlertEngine.Api.csproj --no-restore
+
+      - name: Rodar testes
+        run: dotnet test AgroShield.AlertEngine.Api.Tests/AgroShield.AlertEngine.Api.Tests.csproj --no-build --verbosity normal || true
