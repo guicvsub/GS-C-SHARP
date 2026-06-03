@@ -30,7 +30,7 @@ jobs:
       # CONTROLE: Gerar appsettings seguro usando GitHub Secrets (nunca hardcoded)
       - name: Injetar segredos no appsettings
         run: |
-          cat > AgroSat.AlertEngine.Api/appsettings.Production.json << EOF
+          cat > AgroShield.AlertEngine.Api/appsettings.Production.json << EOF
           {
             "ConnectionStrings": {
               "DefaultConnection": "Server=${{ secrets.DB_SERVER }};Database=${{ secrets.DB_NAME }};User=${{ secrets.DB_USER }};Password=${{ secrets.DB_PASSWORD }};SslMode=None;AllowPublicKeyRetrieval=True"
