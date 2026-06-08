@@ -135,14 +135,7 @@ A migration `InitialCreate` ja esta na pasta `Migrations/`, so rodar o `database
 | `AREA_CULTIVO_INATIVA`          | BAIXA      | emCultivo false com area > 0                      |
 | `SAUDAVEL`                      | BAIXA      | Nenhuma regra disparada                           |
 
-## Fluxo com Java e Python
 
-```
-Java (Spring)  --POST /compor-->  C# AlertEngine  --> MySQL (salva historico)
-                                       |
-                                       --> retorna { mensagemParaFala, severidade, ... }
-Java           --POST /speak-->   Python TTS  (mensagemParaFala -> MP3)
-```
 
 ## Testes
 
